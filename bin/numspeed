@@ -7,7 +7,7 @@ use strict;
 use warnings;
 no warnings 'numeric';
 
-use Getopt::Long;
+use Getopt::Long::Complete;
 use Time::HiRes qw(time);
 
 my %Opts = (
@@ -22,23 +22,23 @@ sub _with_unit {
         my $s = ($n2-$n1) / ($t2-$t1);
         if ($Opts{si}) {
             if ($s > 1.5e9) {
-                return ($s/1e9, "Gi");
+                return ($s/1e9, "Gi/s");
             } elsif ($s > 1.5e6) {
-                return ($s/1e6, "Mi");
+                return ($s/1e6, "Mi/s");
             } elsif ($s > 1.5e3) {
-                return ($s/1e6, "Ki");
+                return ($s/1e6, "Ki/s");
             } else {
-                return ($s, "");
+                return ($s, "/s");
             }
         } else {
             if ($s > 1.5*2**30) {
-                return ($s/2**30, "G");
+                return ($s/2**30, "G/s");
             } elsif ($s > 1.5*2**20) {
-                return ($s/2**20, "M");
+                return ($s/2**20, "M/s");
             } elsif ($s > 1.5*2**10) {
-                return ($s/2**10, "K");
+                return ($s/2**10, "K/s");
             } else {
-                return ($s, "");
+                return ($s, "/s");
             }
         }
     }
@@ -46,6 +46,7 @@ sub _with_unit {
 
 sub parse_cmdline {
     my $res = GetOptions(
+        'si!'           => \$Opts{si},
         'version|v'     => sub {
             no warnings;
             print "linespeed version $main::VERSION ($main::DATE)\n";
@@ -90,17 +91,13 @@ sub run {
         next unless $time - $prev_time >= 0.5;
 
         my $new_msg = sprintf(
-            "Cur speed: %7.3f%s/s  Avg: %7.3f%s/s",
+            "Cur speed: %8.3f%-4s  Avg: %8.3f%-4s",
             _with_unit($num, $prev_num , $time, $prev_time ),
             _with_unit($num, $first_num, $time, $first_time),
         );
 
-        # or we can also use \e[K = clear from cursor to EOL
-        $new_msg .= " " x (length $msg - length $new_msg)
-            if length $msg > length $new_msg;
-
         print "\b" x length $msg;
-        print $new_msg;
+        print $new_msg, "\e[K"; # clear to EOL
 
         $msg = $new_msg;
         $prev_num = $num;
